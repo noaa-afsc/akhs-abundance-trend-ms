@@ -1,4 +1,35 @@
-# A repository in support of the manuscript _Abundance and trends of harbor seals (Phoca vitulina richardii) in Alaska, 1996–2023_
+# Abundance and trends of harbor seals (Phoca vitulina richardii) in Alaska, 1996–2023
+
+A repository in support of the above manuscript and reproducible creation of tables, figures, and data
+
+## Repository Structure
+
+```
+.
+├── data               # Compiled data files (*.rda)
+├── data-raw           # Raw data files (*.csv, *.parquet)
+├── docs               # Documentation (*.md, *.qmd, *.html)
+├── figures            # R code for creating figures and figure output
+├── scripts            # General helper scripts and R functions
+├── tables             # R code for creating tables and table output
+├── LICENSE
+└── README.md
+```
+
+## External Resources
+
+### Alaska Harbor Seal Stock Boundaries
+Available through ArcGIS Online at  
+https://hub.arcgis.com/datasets/noaa::alaska-harbor-seal-stocks/about
+
+### Alaska Harbor Seal Aerial Survey Units
+Available through ArcGIS Online at  
+https://hub.arcgis.com/datasets/noaa::alaska-harbor-seal-aerial-survey-units/about
+
+### Alaska Harbor Seal Haul-out Locations
+Available through ArcGIS Online at  
+https://hub.arcgis.com/datasets/noaa::-alaska-harbor-seal-haul-out-locations/about
+
 
 ## Disclaimer
 
