@@ -18,6 +18,10 @@ A repository in support of the above manuscript and reproducible creation of tab
 
 ## External Resources
 
+### `HSSurv` GitHub Repo
+GitHub repository associated with the methods manuscript
+
+
 ### Alaska Harbor Seal Stock Boundaries
 Available through ArcGIS Online at  
 https://hub.arcgis.com/datasets/noaa::alaska-harbor-seal-stocks/about
