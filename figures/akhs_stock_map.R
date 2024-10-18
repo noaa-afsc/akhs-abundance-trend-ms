@@ -17,7 +17,7 @@ plot.title.position = "plot",
 # left-align title
 plot.caption.position = "plot",
 # right-align caption
-plot.title = element_text(face = "bold"),
+plot.title = element_text(size = 16, face = "bold"),
 # larger, bold title
 plot.caption = element_markdown(color = "grey30"),
 # change color of caption
@@ -117,12 +117,13 @@ ggplot() +
     title = "Geographic range and boundaries of harbor seal stocks in Alaska"
   ) +
   theme(
-    legend.position = "bottom",
+    legend.position = "none",
     legend.title = element_blank(),
     axis.title = element_blank()
   )
 
 ggsave(here::here("figures/png/akhs_stock_map.png"),
+  device = agg_png,
   width = 6.5, height = 4.0,
   units = "in",scale =2,
   bg="white",
