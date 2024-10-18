@@ -13,14 +13,9 @@ theme_set(theme_minimal(base_size = 10,
   base_family = "Arial"))
 
 theme_update(
-plot.title.position = "plot",
-# left-align title
 plot.caption.position = "plot",
-# right-align caption
-plot.title = element_text(size = 16, face = "bold"),
-# larger, bold title
-plot.caption = element_markdown(color = "grey30"),
 # change color of caption
+plot.caption = element_markdown(color = "grey30"),
 panel.grid.minor = element_blank() # no minor grid lines
 )
 
@@ -113,9 +108,6 @@ ggplot() +
   scale_x_continuous(breaks = c(180, -170, -160, -150, -140)) +
   guides(fill = guide_legend(ncol = 4, nrow = 3,
           override.aes = aes(color = NA))) +
-  labs(
-    title = "Geographic range and boundaries of harbor seal stocks in Alaska"
-  ) +
   theme(
     legend.position = "none",
     legend.title = element_blank(),
