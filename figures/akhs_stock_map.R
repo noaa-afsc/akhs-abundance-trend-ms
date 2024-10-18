@@ -1,6 +1,7 @@
 library(ggplot2)
 library(ggrepel)
 library(ggtext)
+library(ragg)
 library(dplyr)
 library(forcats)
 library(rcartocolor)
@@ -9,7 +10,7 @@ library(arcgis)
 library(rnaturalearth)
 library(rnaturalearthhires)
 
-theme_set(theme_minimal(base_size = 10,
+theme_set(theme_minimal(base_size = 12,
   base_family = "Arial"))
 
 theme_update(
@@ -27,10 +28,16 @@ akhs_stocks <- arc_open(akhs_stock_url) |>
 akhs_stocks <- akhs_stocks |> 
   sf::st_transform(3338)
 
-akhs_stocks <- akhs_stocks |> 
-  mutate(stockname = forcats::as_factor(stockname),
-         stockname = forcats::fct_reorder(stockname,stock_num)
-        )
+akhs_stocks <- akhs_stocks |>
+  mutate(stockname = if_else(stockname == "Lynn Canal/Stephens Passage", "Lynn Canal/\nStephens Passage", stockname)) |>
+  mutate(stockname = if_else(stockname == "Cook Inlet/Shelikof Strait", "Cook Inlet/\nShelikof Strait", stockname)) |>
+  mutate(stockname = if_else(stockname == "Prince William Sound", "Prince William\nSound", stockname)) |>
+  mutate(stockname = if_else(stockname == "Glacier Bay/Icy Strait", "Glacier Bay/\nIcy Strait", stockname)) |> 
+  mutate(
+    stockname = forcats::as_factor(stockname),
+    stockname = forcats::fct_reorder(stockname, stock_num)
+  )
+
 
 alaska_base <-
   rnaturalearth::ne_states("United States of America", return = "sf") |>
@@ -66,7 +73,8 @@ ggplot() +
     fill = "gray70",
     linewidth = 0.1
   ) +
-  geom_sf_text(data = alaska_base, aes(label = name)) +
+  geom_sf_text(data = alaska_base, aes(label = name), 
+                size=6, nudge_y = 150*1000) +
   geom_sf(
     data = russia_base,
     fill = "gray85",
@@ -90,15 +98,18 @@ ggplot() +
   geom_sf_text(
     data = map_labels,
     aes(label = label),
-    color = "gray70",
+    color = "gray70", size = 6,
     fontface = "italic"
   ) +
     geom_label_repel(
       data = akhs_stocks,
       aes(label = stockname, geometry = geometry, fill = stockname),
-      color = "white",
+      color = "white", size=6,
       stat = "sf_coordinates",
-      max.overlaps = 100
+      min.segment.length = 0,
+      segment.color = NA,
+      max.overlaps = 100,
+      nudge_y = nudge_label_y, nudge_x = nudge_label_x
     ) +
   coord_sf(
     xlim = c(-2.25e+06, 1.75e+06),
@@ -113,6 +124,36 @@ ggplot() +
     legend.title = element_blank(),
     axis.title = element_blank()
   )
+
+nudge_label_y <- c(
+  0,       #Aleutians
+  -150,    #Pribs
+  -175,    #Bristol Bay
+  0,       #N Kodiak
+  -130,    #S Kodiak
+  220,     #Prince William Sound
+  400,     #Cook Inlet
+  -80,    #Galcier Bay
+  225,     #Lynn Canal/Stephens
+  -175,    #Sitka
+  -150,    #Dixon/Cape Decision
+  75      #Clarence Strait
+) *1000
+
+nudge_label_x <- c(
+  0,            #Aleutians
+  0,    #Pribs
+  0,    #Bristol Bay
+  100,            #N Kodiak
+  110,    #S Kodiak
+  0,     #Prince William Sound
+  -100,     #Cook Inlet
+  -250,    #Galcier Bay
+  100,     #Lynn Canal/Stephens
+  0,    #Sitka
+  0,    #Dixon/Cape Decision
+  0      #Clarence Strait
+) *1000
 
 ggsave(here::here("figures/png/akhs_stock_map.png"),
   device = agg_png,
