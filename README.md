@@ -20,11 +20,8 @@ A repository in support of the above manuscript and reproducible creation of tab
 
 ### `HSSurv` GitHub Repo
 Brett McClintock maintains a GitHub repository associated with the methods 
-manuscript at https://github.com/bmcclintock/HSsurv. Note, this repos is not
+manuscript at https://github.com/bmcclintock/HSsurv. Note, this repo is not
 currently publicly availble so will need to request collaboration.
-
-Of particular interest for this repository is the model output data cube which
-can be found directly at https://github.com/bmcclintock/HSsurv/blob/main/data/akpv_datacube.rda
 
 ### Publicly Available Data through ArcGIS Online
 
