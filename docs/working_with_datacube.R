@@ -1,6 +1,6 @@
 # set a path to the datacube
 mypath = paste0('/mnt/ExtraDrive1/Work/desktop_data/2022_papers/',
-	'HSsurv2023/data/')
+	'HSsurv/data/')
 # load the datacube
 load(paste0(mypath, 'akpv_datacube.rda'))
 
@@ -32,3 +32,27 @@ sum(akpv_datacube[[1]][attr(akpv_datacube[[1]], 'stockid') == 6, "1996"])
 i = 2 # MCMC sample
 sum(akpv_datacube[[i]][attr(akpv_datacube[[i]], 'stockid') == 6, "1996"])
 
+mode = function(x) {	
+	dout = density(x)
+	mean(dout$x[dout$y == max(dout$y)])
+}
+
+sitebyyearmedians = matrix(NA, nrow = dim(akpv_datacube[[1]])[1], 
+	ncol = dim(akpv_datacube[[1]])[2])
+for(i in 1:dim(akpv_datacube[[1]])[1]) {
+	for(j in 1:dim(akpv_datacube[[1]])[2]) {
+		sitebyyearmedians[i,j] =
+			median(unlist(lapply(akpv_datacube,function(x){x[i,j]})))
+	}
+}
+rownames(sitebyyearmedians) = rownames(akpv_datacube[[1]])
+colnames(sitebyyearmedians) = colnames(akpv_datacube[[1]])
+attr(sitebyyearmedians, 'stockid') = attr(akpv_datacube[[1]], 'stockid')
+stock_id = 5
+attr(sitebyyearmedians, 'stockid') == stock_id
+years = as.character(1996:2023)
+summedians = rep(NA, times = 28)
+for(i in 1:28)
+	summedians[i] = sum(sitebyyearmedians[attr(sitebyyearmedians, 
+		'stockid') == stock_id, years[i]])
+plot(years, summedians)
