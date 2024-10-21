@@ -19,18 +19,24 @@ A repository in support of the above manuscript and reproducible creation of tab
 ## External Resources
 
 ### `HSSurv` GitHub Repo
-GitHub repository associated with the methods manuscript
+Brett McClintock maintains a GitHub repository associated with the methods 
+manuscript at https://github.com/bmcclintock/HSsurv. Note, this repos is not
+currently publicly availble so will need to request collaboration.
 
+Of particular interest for this repository is the model output data cube which
+can be found directly at https://github.com/bmcclintock/HSsurv/blob/main/data/akpv_datacube.rda
 
-### Alaska Harbor Seal Stock Boundaries
+### Publicly Available Data through ArcGIS Online
+
+#### Alaska Harbor Seal Stock Boundaries
 Available through ArcGIS Online at  
 https://hub.arcgis.com/datasets/noaa::alaska-harbor-seal-stocks/about
 
-### Alaska Harbor Seal Aerial Survey Units
+#### Alaska Harbor Seal Aerial Survey Units
 Available through ArcGIS Online at  
 https://hub.arcgis.com/datasets/noaa::alaska-harbor-seal-aerial-survey-units/about
 
-### Alaska Harbor Seal Haul-out Locations
+#### Alaska Harbor Seal Haul-out Locations
 Available through ArcGIS Online at  
 https://hub.arcgis.com/datasets/noaa::-alaska-harbor-seal-haul-out-locations/about
 
