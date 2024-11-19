@@ -1,6 +1,6 @@
 #github cloud commits
 cd '/mnt/ExtraDrive1/Work/desktop_data/2024_papers/akhs-abundance-trends'
-git add --all
+git add .
 git commit -a -m 'Jays figures script'
 git push origin main
 git pull origin main
