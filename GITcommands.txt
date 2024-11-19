@@ -2,7 +2,7 @@
 cd '/mnt/ExtraDrive1/Work/desktop_data/2024_papers/akhs-abundance-trends'
 git add .
 git commit -m 'Jays figures script'
-git push origin main
+git push origin HEAD:master
 git pull origin main
 
 
