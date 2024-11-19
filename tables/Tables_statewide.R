@@ -61,7 +61,7 @@ num_sampled = rbind(num_sampled, c(rep(NA, times = 4), c(mean(table(dstk$polyid)
 colnames(num_sampled) = c('stockid', 'n_SSU', 'n_sampled_onceplus','n_nonzero',
 	'times_sampled_mean', 'times_sampled_median')
 
-write.table(num_sampled, file = paste0(tabpath, 'num_sampled.csv'), quote = FALSE,
+write.table(num_sampled, file = paste0(tabpath, 'Survey_Effort_Summary.csv'), quote = FALSE,
 	sep = ',', row.names = FALSE)
 
 
