@@ -1,9 +1,13 @@
-load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
-	'akhs-abundance-trends/akhs-abundance-trends/data/', 'akpv_datacube.rda'))
-load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',	
-	'akhs-abundance-trends/akhs-abundance-trends/data-raw/','dTerr.rda'))
-load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
-	'akhs-abundance-trends/akhs-abundance-trends/data-raw/','dGlac.rda'))
+setwd(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
+	'akhs-abundance-trends/akhs-abundance-trends/data/'))
+load('akpv_datacube.rda')
+setwd(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',	
+	'akhs-abundance-trends/akhs-abundance-trends/data-raw/'))
+load('dTerr.rda')
+load('dGlac.rda')
+load('dHOterr.rda')
+load('dHOglac.rda')
+load('akpvpolys_sf.rda')
 
 
 figpath = paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
@@ -300,6 +304,387 @@ png(paste0(figpath, 'Fig_8yr_precent_trend_by_stock.png'), width = 960, height =
 	layout(1)
 	
 dev.off()
+
+#-------------------------------------------------------------------------------
+#                 Haulout Covariates
+#-------------------------------------------------------------------------------
+
+setwd(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
+	'akhs-abundance-trends/akhs-abundance-trends/data/'))
+
+# get the aerial survey data for only stocks 3 through 7
+dstk = dTerr[dTerr$stockid == 3 | dTerr$stockid == 4 | dTerr$stockid == 5 | 
+	dTerr$stockid == 6 | dTerr$stockid == 7,]
+# get the haul-out data for only stocks 3 through 7
+dHO = dHOterr[dHOterr$stockid == 3 | dHOterr$stockid == 4 | 
+	dHOterr$stockid == 5 | dHOterr$stockid == 6 | dHOterr$stockid == 7,]
+
+# only use data after 1995
+dstk = dstk[dstk$yr > 1995,]
+# make sure polyid and stockid are factors in count data
+dstk$polyid = as.factor(as.character(dstk$polyid))
+dstk$stockid = as.factor(as.character(dstk$stockid))
+IDs = levels(dstk$polyid)
+#order by datadatetime within speno, and remove duplicate times
+dstk = dstk[order(dstk$polyid, dstk$survey_dt),]
+
+# make sure speno is factor in haulout data
+dHO$speno = as.factor(as.character(dHO$speno))
+HOIDs = levels(dHO$speno)
+#order by datadatetime within speno
+dHO = dHO[order(dHO$speno, dHO$date_time),]
+# check for any duplicated times (must be increasing within animal)
+any(dHO$yrhr0[2:dim(dHO)[1]] - dHO$yrhr0[1:(dim(dHO)[1] - 1)] == 0)
+
+# inspect average haulout proportions by seal ID
+y = dHO$y
+# create binary data from binned data
+y[dHO$y < 0.5] = 0
+y[y != 0] = 1
+# create design matrix
+X <- model.matrix(y ~ dystd + I(dystd^2) + tdstd + I(tdstd^2)
+  + hrstd + I(hrstd^2), data = dHO)
+# load the MCMC results from fitting haul-out model
+
+
+#pdf(file = paste0(out_path,'HO_betas.pdf'), width = 15, height = 6)
+png(paste0(figpath, 'Fig_HO_expl_var.png'), width = 1000, height = 1300)
+
+layout(matrix(1:12, nrow = 4, byrow = TRUE))
+
+cex_lab = 2.1
+cex_axis = 2.5
+adj_1 = 0.5
+padj_1 = 2.3
+adj_2 = 0.5
+padj_2 = -2.1
+cex_main = 5
+
+load('MHO_1to2.rda')
+MHO = MHO_1to2
+
+lenbeta = length(MHO[['beta']][[1]])
+
+# fixed effects
+beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
+beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
+beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
+beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
+beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
+if(lenbeta > 5) {
+beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
+beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
+}
+gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
+	
+  par(mar = c(6,7,8,3))
+  plot(c(1,80),c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = ((1:75) - 30)/30
+  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
+  for(k in 1:length(beta1)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+  lines(1:75, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
+	mtext('Days since 15 July', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+
+	
+# beta - hour-of-day effect
+
+	plot(c(-12,12),c(0,1), type = 'n',
+			ylab = '', xaxt = 'n',
+			xlab = '',
+			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
+			main = 'Stocks 1-2')
+	x = (-60:60)/30
+	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
+	for(k in 1:length(beta1)) {
+			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
+				beta5[k]*x + beta6[k]*x^2
+			HOvec[k,] = exp(Xb)/(1+exp(Xb))
+	}
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
+			adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+			adj = adj_2, padj = padj_2)
+
+# beta - tide effects (or, hours from solar noon for glacial haulout)
+
+  plot(c(-5,5), c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = (-50:50)/25
+  xtran = 2.5*x
+  HOvec = matrix(0, nrow = length(beta3), ncol = length(x))
+  for(k in 1:length(beta3)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta3[k]*x + beta4[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(xtran,rev(xtran)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+  lines(xtran, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*2, labels = (-2:2)*2, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Low Tide', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+
+# beta - date effects
+
+load('MHO_3to7.rda')
+MHO = MHO_3to7
+
+lenbeta = length(MHO[['beta']][[1]])
+
+# fixed effects
+beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
+beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
+beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
+beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
+beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
+if(lenbeta > 5) {
+beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
+beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
+}
+gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
+
+ par(mar = c(6,7,8,3))
+  plot(c(1,80),c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = ((1:75) - 30)/30
+  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
+  for(k in 1:length(beta1)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+  lines(1:75, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
+	mtext('Days since 15 July', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+
+# beta - hour-of-day effect
+
+	plot(c(-12,12),c(0,1), type = 'n',
+			ylab = '', xaxt = 'n',
+			xlab = '',
+			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
+			main = 'Stocks 3-7')
+	x = (-60:60)/30
+	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
+	for(k in 1:length(beta1)) {
+			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
+				beta5[k]*x + beta6[k]*x^2
+			HOvec[k,] = exp(Xb)/(1+exp(Xb))
+	}
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
+			adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+			adj = adj_2, padj = padj_2)
+
+# beta - tide effects (or, hours from solar noon for glacial haulout)
+
+  plot(c(-5,5), c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = (-50:50)/25
+  xtran = 2.5*x
+  HOvec = matrix(0, nrow = length(beta3), ncol = length(x))
+  for(k in 1:length(beta3)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta3[k]*x + beta4[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(xtran,rev(xtran)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+  lines(xtran, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*2, labels = (-2:2)*2, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Low Tide', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+	
+
+# beta - date effects
+
+load('MHO_8to12.rda')
+MHO = MHO_8to12
+
+lenbeta = length(MHO[['beta']][[1]])
+
+# fixed effects
+beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
+beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
+beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
+beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
+beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
+if(lenbeta > 5) {
+beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
+beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
+}
+gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
+
+ par(mar = c(6,7,8,3))
+  plot(c(1,80),c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = ((1:75) - 30)/30
+  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
+  for(k in 1:length(beta1)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+  lines(1:75, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
+	mtext('Days since 15 July', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+
+# beta - hour-of-day effect
+
+	plot(c(-12,12),c(0,1), type = 'n',
+			ylab = '', xaxt = 'n',
+			xlab = '',
+			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
+			main = 'Stocks 8-12')
+	x = (-60:60)/30
+	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
+	for(k in 1:length(beta1)) {
+			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
+				beta5[k]*x + beta6[k]*x^2
+			HOvec[k,] = exp(Xb)/(1+exp(Xb))
+	}
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
+			adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+			adj = adj_2, padj = padj_2)
+
+# beta - tide effects (or, hours from solar noon for glacial haulout)
+
+  plot(c(-5,5), c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = (-50:50)/25
+  xtran = 2.5*x
+  HOvec = matrix(0, nrow = length(beta3), ncol = length(x))
+  for(k in 1:length(beta3)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta3[k]*x + beta4[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(xtran,rev(xtran)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+  lines(xtran, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*2, labels = (-2:2)*2, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Low Tide', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+	
+###    GLACIAL DATA
+	
+load('MHO_glac.rda')
+MHO = MHO_glac
+
+lenbeta = length(MHO[['beta']][[1]])
+
+# fixed effects
+beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
+beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
+beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
+beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
+beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
+
+# beta - date effects
+
+ par(mar = c(6,7,8,3))
+  plot(c(1,80),c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+  x = ((1:75) - 30)/30
+  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
+  for(k in 1:length(beta1)) {
+    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
+    HOvec[k,] = exp(Xb)/(1+exp(Xb))
+  }
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+  lines(1:75, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
+	mtext('Days since 15 July', side = 1, cex = cex_lab, 
+		adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+
+# beta - hour-of-day effect
+
+	plot(c(-12,12),c(0,1), type = 'n',
+			ylab = '', xaxt = 'n',
+			xlab = '',
+			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
+			main = 'Glacial Data')
+	x = (-60:60)/30
+	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
+	for(k in 1:length(beta1)) {
+			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
+				beta3[k]*x + beta4[k]*x^2
+			HOvec[k,] = exp(Xb)/(1+exp(Xb))
+	}
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
+		col = 'grey', border = 'grey')
+	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
+	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
+	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
+			adj = adj_1, padj = padj_1)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+			adj = adj_2, padj = padj_2)
+
+dev.off()
+
+
 
 ################################################################################
 ################################################################################
@@ -696,391 +1081,6 @@ write.csv(current_est_table, file = paste0(
 	}
 
 
-
-#-------------------------------------------------------------------------------
-#                 Haulout Covariates
-#-------------------------------------------------------------------------------
-
-in_path = paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers',
-	'/HSsurv/HSsurv/data/')
-
-# colors '#D81B60','#1E88E5', '#FFC107','#004D40'
-# red, blue, yellow, green
-# rgb proportion: (.847, .106, .376), (.118, .533, .898),(1, .757, .027)
-load(paste0(in_path,'dHOterr.rda'))
-load(paste0(in_path,'dTerr.rda'))
-	
-# get the aerial survey data for only stocks 3 through 7
-dstk = dTerr[dTerr$stockid == 3 | dTerr$stockid == 4 | dTerr$stockid == 5 | 
-	dTerr$stockid == 6 | dTerr$stockid == 7,]
-# get the haul-out data for only stocks 3 through 7
-dHO = dHOterr[dHOterr$stockid == 3 | dHOterr$stockid == 4 | 
-	dHOterr$stockid == 5 | dHOterr$stockid == 6 | dHOterr$stockid == 7,]
-
-# only use data after 1995
-dstk = dstk[dstk$yr > 1995,]
-# make sure polyid and stockid are factors in count data
-dstk$polyid = as.factor(as.character(dstk$polyid))
-dstk$stockid = as.factor(as.character(dstk$stockid))
-IDs = levels(dstk$polyid)
-#order by datadatetime within speno, and remove duplicate times
-dstk = dstk[order(dstk$polyid, dstk$survey_dt),]
-
-# make sure speno is factor in haulout data
-dHO$speno = as.factor(as.character(dHO$speno))
-HOIDs = levels(dHO$speno)
-#order by datadatetime within speno
-dHO = dHO[order(dHO$speno, dHO$date_time),]
-# check for any duplicated times (must be increasing within animal)
-any(dHO$yrhr0[2:dim(dHO)[1]] - dHO$yrhr0[1:(dim(dHO)[1] - 1)] == 0)
-
-# inspect average haulout proportions by seal ID
-y = dHO$y
-# create binary data from binned data
-y[dHO$y < 0.5] = 0
-y[y != 0] = 1
-# create design matrix
-X <- model.matrix(y ~ dystd + I(dystd^2) + tdstd + I(tdstd^2)
-  + hrstd + I(hrstd^2), data = dHO)
-# load the MCMC results from fitting haul-out model
-
-
-#pdf(file = paste0(out_path,'HO_betas.pdf'), width = 15, height = 6)
-png(paste0(figpath, 'Fig_HO_expl_var.png'), width = 1000, height = 1300)
-
-layout(matrix(1:12, nrow = 4, byrow = TRUE))
-
-cex_lab = 2.1
-cex_axis = 2.5
-adj_1 = 0.5
-padj_1 = 2.3
-adj_2 = 0.5
-padj_2 = -2.1
-cex_main = 5
-
-load(paste0(in_path, 'MHO_1to2.rda'))
-MHO = MHO_1to2
-
-lenbeta = length(MHO[['beta']][[1]])
-
-# fixed effects
-beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
-beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
-beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
-beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
-beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
-if(lenbeta > 5) {
-beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
-beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
-}
-gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
-	
-  par(mar = c(6,7,8,3))
-  plot(c(1,80),c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = ((1:75) - 30)/30
-  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
-  for(k in 1:length(beta1)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-  lines(1:75, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
-	mtext('Days since 15 July', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-
-	
-# beta - hour-of-day effect
-
-	plot(c(-12,12),c(0,1), type = 'n',
-			ylab = '', xaxt = 'n',
-			xlab = '',
-			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
-			main = 'Stocks 1-2')
-	x = (-60:60)/30
-	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
-	for(k in 1:length(beta1)) {
-			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
-				beta5[k]*x + beta6[k]*x^2
-			HOvec[k,] = exp(Xb)/(1+exp(Xb))
-	}
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
-			adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-			adj = adj_2, padj = padj_2)
-
-# beta - tide effects (or, hours from solar noon for glacial haulout)
-
-  plot(c(-5,5), c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = (-50:50)/25
-  xtran = 2.5*x
-  HOvec = matrix(0, nrow = length(beta3), ncol = length(x))
-  for(k in 1:length(beta3)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta3[k]*x + beta4[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(xtran,rev(xtran)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-  lines(xtran, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*2, labels = (-2:2)*2, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Low Tide', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-
-# beta - date effects
-
-load(paste0(in_path, 'MHO_3to7.rda'))
-MHO = MHO_3to7
-
-lenbeta = length(MHO[['beta']][[1]])
-
-# fixed effects
-beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
-beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
-beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
-beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
-beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
-if(lenbeta > 5) {
-beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
-beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
-}
-gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
-
- par(mar = c(6,7,8,3))
-  plot(c(1,80),c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = ((1:75) - 30)/30
-  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
-  for(k in 1:length(beta1)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-  lines(1:75, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
-	mtext('Days since 15 July', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-
-# beta - hour-of-day effect
-
-	plot(c(-12,12),c(0,1), type = 'n',
-			ylab = '', xaxt = 'n',
-			xlab = '',
-			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
-			main = 'Stocks 3-7')
-	x = (-60:60)/30
-	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
-	for(k in 1:length(beta1)) {
-			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
-				beta5[k]*x + beta6[k]*x^2
-			HOvec[k,] = exp(Xb)/(1+exp(Xb))
-	}
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
-			adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-			adj = adj_2, padj = padj_2)
-
-# beta - tide effects (or, hours from solar noon for glacial haulout)
-
-  plot(c(-5,5), c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = (-50:50)/25
-  xtran = 2.5*x
-  HOvec = matrix(0, nrow = length(beta3), ncol = length(x))
-  for(k in 1:length(beta3)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta3[k]*x + beta4[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(xtran,rev(xtran)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-  lines(xtran, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*2, labels = (-2:2)*2, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Low Tide', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-	
-
-# beta - date effects
-
-load(paste0(in_path, 'MHO_8to12.rda'))
-MHO = MHO_8to12
-
-lenbeta = length(MHO[['beta']][[1]])
-
-# fixed effects
-beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
-beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
-beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
-beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
-beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
-if(lenbeta > 5) {
-beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
-beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
-}
-gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
-
- par(mar = c(6,7,8,3))
-  plot(c(1,80),c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = ((1:75) - 30)/30
-  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
-  for(k in 1:length(beta1)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-  lines(1:75, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
-	mtext('Days since 15 July', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-
-# beta - hour-of-day effect
-
-	plot(c(-12,12),c(0,1), type = 'n',
-			ylab = '', xaxt = 'n',
-			xlab = '',
-			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
-			main = 'Stocks 8-12')
-	x = (-60:60)/30
-	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
-	for(k in 1:length(beta1)) {
-			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
-				beta5[k]*x + beta6[k]*x^2
-			HOvec[k,] = exp(Xb)/(1+exp(Xb))
-	}
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
-			adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-			adj = adj_2, padj = padj_2)
-
-# beta - tide effects (or, hours from solar noon for glacial haulout)
-
-  plot(c(-5,5), c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = (-50:50)/25
-  xtran = 2.5*x
-  HOvec = matrix(0, nrow = length(beta3), ncol = length(x))
-  for(k in 1:length(beta3)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta3[k]*x + beta4[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(xtran,rev(xtran)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-  lines(xtran, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*2, labels = (-2:2)*2, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Low Tide', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-	
-###    GLACIAL DATA
-	
-load(paste0(in_path, 'MHO_glac.rda'))
-MHO = MHO_glac
-
-lenbeta = length(MHO[['beta']][[1]])
-
-# fixed effects
-beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
-beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
-beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
-beta3 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
-beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
-
-# beta - date effects
-
- par(mar = c(6,7,8,3))
-  plot(c(1,80),c(0,1), type = 'n',
-    ylab = '', xlab = '', xaxt = 'n',
-    cex.lab = cex_lab, cex.axis = cex_axis)
-  x = ((1:75) - 30)/30
-  HOvec = matrix(0, nrow = length(beta1), ncol = 75)
-  for(k in 1:length(beta1)) {
-    Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + beta1[k]*x + beta2[k]*x^2
-    HOvec[k,] = exp(Xb)/(1+exp(Xb))
-  }
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-  lines(1:75, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
-	mtext('Days since 15 July', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-		adj = adj_2, padj = padj_2)
-
-# beta - hour-of-day effect
-
-	plot(c(-12,12),c(0,1), type = 'n',
-			ylab = '', xaxt = 'n',
-			xlab = '',
-			cex.lab = cex_lab, cex.axis = cex_axis, cex.main = cex_main,
-			main = 'Glacial Data')
-	x = (-60:60)/30
-	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
-	for(k in 1:length(beta1)) {
-			Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
-				beta3[k]*x + beta4[k]*x^2
-			HOvec[k,] = exp(Xb)/(1+exp(Xb))
-	}
-  bot = apply(HOvec,2,quantile, probs = .05)
-  top = apply(HOvec,2,quantile, probs = .95)
-	polygon(x = c((-60:60)/5,rev((-60:60)/5)),y = c(top,rev(bot)), 
-		col = 'grey', border = 'grey')
-	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (-2:2)*5, labels = (-2:2)*5, cex.axis = 2.5, padj = 0.4)
-	mtext('Hours from Solar Noon', side = 1, cex = cex_lab, 
-			adj = adj_1, padj = padj_1)
-	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
-			adj = adj_2, padj = padj_2)
-
-dev.off()
 
 
 #-------------------------------------------------------------------------------
