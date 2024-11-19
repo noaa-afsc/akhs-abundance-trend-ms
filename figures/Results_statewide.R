@@ -684,6 +684,63 @@ beta4 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
 
 dev.off()
 
+#-------------------------------------------------------------------------------
+#                 Plain Abundance
+#-------------------------------------------------------------------------------
+
+
+stock_id = 1
+plot_simple_abundance = function(stock_id){
+	
+#	years = as.character(1996:2023)
+#	summedians = rep(NA, times = 28)
+#	for(i in 1:28)
+#		summedians[i] = sum(sitebyyearmedians[attr(sitebyyearmedians, 
+#			'stockid') == stock_id, years[i]])
+
+	cexLab =  3.0
+	cexAxis = 2.5
+	abu_pts_cex = 1.7
+	marTop = c(0,0,0,0)
+	cex_main = 1.7
+	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
+	for(i in 1:1000) pop[i,] = 
+		apply(akpv_datacube[[i]][attr(akpv_datacube[[i]], 'stockid') == 
+			stock_id,], 2, sum)
+	bot = apply(pop, 2, quantile, prob = .025)
+	top = apply(pop, 2, quantile, prob = .975)
+	# get average abundance by polyid and year by averaging over MCMC samples
+	abu_poly_by_year = akpv_datacube[[1]][attr(akpv_datacube[[1]], 'stockid') == 
+				stock_id,]
+	for(i in 2:length(akpv_datacube)) 
+		abu_poly_by_year = abu_poly_by_year +
+			akpv_datacube[[i]][attr(akpv_datacube[[i]], 'stockid') == 
+					stock_id,]
+	abu_poly_by_year = abu_poly_by_year/length(akpv_datacube)
+	rownames(abu_poly_by_year)
+	par(mar = marTop)
+	plot(c(1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
+		xaxt = 'n', ylab = '', cex.main = cex_main, yaxt = 'n',
+		xlab = '', cex.lab = cexLab, cex.axis = cexAxis)
+#	grid(nx = NULL,
+#     ny = NA,
+#     lty = 2, col = "gray", lwd = 3)
+	vals = 	apply(pop, 2, mean)
+	lines(vals, lwd = 12)
+#	axis(1, at = c(5,10,15,20,25), labels = c(2000, 2005, 2010, 2015, 2020),
+#		cex.axis = cexAxis)
+#	mtext('Year', side = 1, padj = 2.2, cex = cexLab)
+}
+
+plot_simple_abundance(1)
+
+for(i in 1:12) {
+	stock_id = i
+	png(paste0(figpath, 'Fig_AbuSimple_stock_',stock_id,'.png'), 
+		width = 600, height = 600)
+		plot_simple_abundance(i)
+	dev.off()
+}
 
 
 ################################################################################
