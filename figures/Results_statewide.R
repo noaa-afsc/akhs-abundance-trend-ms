@@ -1,13 +1,13 @@
 load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
-	'HSsurv/HSsurv/data/', 'akpv_datacube.rda'))
+	'akhs-abundance-trends/akhs-abundance-trends/data/', 'akpv_datacube.rda'))
+load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',	
+	'akhs-abundance-trends/akhs-abundance-trends/data-raw/','dTerr.rda'))
 load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
-	'HSsurv/HSsurv/data/','dTerr.rda'))
-load(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
-	'HSsurv/HSsurv/data/','dGlac.rda'))
+	'akhs-abundance-trends/akhs-abundance-trends/data-raw/','dGlac.rda'))
 
 
 figpath = paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
-	'HSsurv/HSsurv/inst/scripts/DataCube/figures/')
+	'akhs-abundance-trends/akhs-abundance-trends/figures/png/')
 
 stockid_names = data.frame(stockid = 1:12, stocknames = 
 	c('Aleutians',
@@ -25,6 +25,60 @@ stockid_names = data.frame(stockid = 1:12, stocknames =
 )
 	
 #-------------------------------------------------------------------------------
+#                 Fig_statewide 3-panel
+#-------------------------------------------------------------------------------
+
+png(paste0(figpath, 'Fig_statewide_abu_trend.png'), width = 620, height = 720)
+
+	layout(matrix(1:2, nrow = 2, ncol = 1), heights = c(1.05, 1.2))
+
+# State-wide Abundance
+
+	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
+	for(i in 1:1000) pop[i,] = 
+		apply(akpv_datacube[[i]], 2, sum)
+	bot = apply(pop, 2, quantile, prob = .025)
+	top = apply(pop, 2, quantile, prob = .975)
+	par(mar = c(0,5,1,1))
+	plot(c(1.1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
+		xaxt = 'n', ylab = 'Estimated Abundance', cex.main = 1.5,
+		xlab = 'Year', cex.lab = 2.5, cex.axis = 1.5,
+	)
+	grid(nx = NULL,
+     ny = NA,
+     lty = 2, col = "gray", lwd = 2)
+	polygon(x = c(1:28,28:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+	lines(1:28, apply(pop,2,mean), pch = 19, lwd = 2)
+	points(apply(pop,2,mean), pch = 19, cex = 2)
+  maxi = ncol(akpv_datacube[[1]])
+  trendlen = 8
+  propTrendMat = NULL
+  for(i in 1:(maxi - trendlen + 1))
+    propTrendMat = cbind(propTrendMat,
+      100*(exp(apply(pop,1,function(v){coef(lm(I(log(y))~x, 
+        data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))-1))
+  bot = apply(propTrendMat,2,quantile, prob = .025)
+  top = apply(propTrendMat,2,quantile, prob = .975)
+  par(mar = c(5,5,0,1))
+	plot(c(1.1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
+      xaxt = 'n', ylab = 'Trend (%/Year)', cex.main = 1.5,
+      xlab = 'Year', cex.lab = 2.5, cex.axis = 1.5,
+      )
+		axis(1, at = c(5, 10, 15, 20, 25), labels = c(2000, 2005, 2010, 2015, 2020),
+			cex.axis = 1.5)
+	grid(nx = NULL,
+     ny = NA,
+     lty = 2, col = "gray", lwd = 2)
+  polygon(x = c(8:28,28:8),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+	lines(8:28, apply(propTrendMat,2,mean), lwd = 2)
+	points(8:28, apply(propTrendMat,2,mean), pch = 19, cex = 2)
+  lines(c(1,28),c(0,0), lty = 2, lwd = 3, col ='black')
+
+	layout(1)
+
+dev.off()
+
+#-------------------------------------------------------------------------------
 #                 Fig_abundance_by_stock
 #-------------------------------------------------------------------------------
 
@@ -41,18 +95,6 @@ dGlac = dGlac[!is.na(dGlac$count),]
 dstk = rbind(dTerr[,c('polyid', 'stockid', 'yr')],
 	dGlac[,c('polyid', 'stockid', 'yr')])
 
-#sitebyyearmedians = matrix(NA, nrow = dim(akpv_datacube[[1]])[1], 
-#	ncol = dim(akpv_datacube[[1]])[2])
-#for(i in 1:dim(akpv_datacube[[1]])[1]) {
-#	for(j in 1:dim(akpv_datacube[[1]])[2]) {
-#		sitebyyearmedians[i,j] =
-#			median(unlist(lapply(akpv_datacube,function(x){x[i,j]})))
-#	}
-#}
-#rownames(sitebyyearmedians) = rownames(akpv_datacube[[1]])
-#colnames(sitebyyearmedians) = colnames(akpv_datacube[[1]])
-#attr(sitebyyearmedians, 'stockid') = attr(akpv_datacube[[1]], 'stockid')
-#attr(sitebyyearmedians, 'stockid') == stock_id
 
 mode = function(x) {	
 	dout = density(x)
@@ -62,12 +104,6 @@ mode = function(x) {
 stock_id = 1
 plot_abundance = function(stock_id){
 	
-#	years = as.character(1996:2023)
-#	summedians = rep(NA, times = 28)
-#	for(i in 1:28)
-#		summedians[i] = sum(sitebyyearmedians[attr(sitebyyearmedians, 
-#			'stockid') == stock_id, years[i]])
-
 	cexLab =  2.0
 	cexAxis = 1.5
 	cexYax2 = 1.5
@@ -110,17 +146,13 @@ plot_abundance = function(stock_id){
      lty = 2, col = "gray", lwd = 2)
 	pchtype = rep(3, times = ncol(akpv_datacube[[1]]))
 	pchtype[fraci > 0] = 19
-#	points(apply(pop, 2, mean), pch = pchtype, cex = 1.9, lwd = 1.5)
 	polygon(x = c(1:28,28:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-#	for(i in 1:ncol(akpv_datacube[[1]]))
-#		lines(c(i,i),c(bot[i],top[i]), lty = 1, lwd = 14, col = 'grey')
 	vals = 	apply(pop, 2, mean)
 	lines(vals, lwd = 1.5)
 	valsNA = vals
 	valsNA[fraci == 0] = NA
 	points(vals, pch = 19, cex = 1.9, lwd = 1.5)
 	points(valsNA, pch = 19, cex = 1.9, lwd = 1.5)
-#	points(summedians, pch = 3, cex = 2, lwd = 2)
 	
 	# plot the fractions sampled per year
 	par(mar = marBot)
@@ -140,6 +172,7 @@ plot_abundance = function(stock_id){
 	mtext('Effort', side = 2, padj = -2.2, cex = .65*cexLab)
 }
 
+#  --------------------- PDF
 
 pdf(paste0(figpath, 'Fig_abundance_by_stock.pdf'), width = 8.5, height = 11)
 
@@ -162,6 +195,8 @@ pdf(paste0(figpath, 'Fig_abundance_by_stock.pdf'), width = 8.5, height = 11)
 	
 dev.off()
 
+#  --------------------- PNG
+
 png(paste0(figpath, 'Fig_abundance_by_stock.png'), width = 1000, height = 1100)
 
 	layout(matrix(1:24, ncol = 3), heights = rep(c(2,1.2), times= 12))
@@ -183,7 +218,98 @@ png(paste0(figpath, 'Fig_abundance_by_stock.png'), width = 1000, height = 1100)
 	
 dev.off()
 
+#-------------------------------------------------------------------------------
+#                 Fig_8yr_precent_trend_by_stock
+#-------------------------------------------------------------------------------
 
+plot_trend_percent = function(stock_id){
+	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
+	for(i in 1:1000) pop[i,] = 
+		apply(akpv_datacube[[i]][
+			attr(akpv_datacube[[i]], 'stockid') == stock_id,], 2, sum)
+  maxi = ncol(akpv_datacube[[1]])
+  trendlen = 8
+  propTrendMat = NULL
+  for(i in 1:(maxi - trendlen + 1))
+    propTrendMat = cbind(propTrendMat,
+      100*(exp(apply(pop,1,function(v){coef(lm(I(log(y))~x, 
+        data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))-1))
+  bot = apply(propTrendMat,2,quantile, prob = .025)
+  top = apply(propTrendMat,2,quantile, prob = .975)
+  par(mar = c(5,5,5,1))
+    plot(c(1,length(top)), c(min(bot),max(top)), type = 'n',
+      xaxt = 'n', ylab = 'Trend (%/Year)', cex.main = 1.5,
+      xlab = 'Year', cex.lab = 2, cex.axis = 1.5,
+			main = paste0('Stock ', stock_id, ': ', 
+				stockid_names[stock_id,'stocknames']), 
+				ylim = c(-7,9))
+    axis(1, at = c(1,5,10,15,20), labels = c(2003, 2007, 2012, 2017, 2022),
+     cex.axis = 1.5)
+	grid(nx = NULL,
+     ny = NA,
+     lty = 2, col = "gray", lwd = 2)
+	polygon(x = c(1:21,21:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
+  lines(c(1, 22), c(0,0), lty = 2, lwd = 3)
+  lines(apply(propTrendMat, 2, mean), pch = 19, lwd = 3)
+  points(apply(propTrendMat, 2, mean), pch = 19, cex = 2)
+}
+
+#  --------------------- PDF
+
+pdf(paste0(figpath, 'Fig_8yr_precent_trend_by_stock.pdf'), 
+	width = 13, height = 17)
+
+	layout(matrix(1:12, nrow = 4, ncol = 3, byrow = TRUE))
+
+	plot_trend_percent(stock_id = 1)
+	plot_trend_percent(stock_id = 2)
+	plot_trend_percent(stock_id = 3)
+	plot_trend_percent(stock_id = 4)
+	plot_trend_percent(stock_id = 5)
+	plot_trend_percent(stock_id = 6)
+	plot_trend_percent(stock_id = 7)
+	plot_trend_percent(stock_id = 8)
+	plot_trend_percent(stock_id = 9)
+	plot_trend_percent(stock_id = 10)
+	plot_trend_percent(stock_id = 11)
+	plot_trend_percent(stock_id = 12)
+
+	layout(1)
+	
+dev.off()
+
+#  --------------------- PNG
+
+png(paste0(figpath, 'Fig_8yr_precent_trend_by_stock.png'), width = 960, height = 1240)
+
+	layout(matrix(1:12, nrow = 4, ncol = 3, byrow = TRUE))
+
+	plot_trend_percent(stock_id = 1)
+	plot_trend_percent(stock_id = 2)
+	plot_trend_percent(stock_id = 3)
+	plot_trend_percent(stock_id = 4)
+	plot_trend_percent(stock_id = 5)
+	plot_trend_percent(stock_id = 6)
+	plot_trend_percent(stock_id = 7)
+	plot_trend_percent(stock_id = 8)
+	plot_trend_percent(stock_id = 9)
+	plot_trend_percent(stock_id = 10)
+	plot_trend_percent(stock_id = 11)
+	plot_trend_percent(stock_id = 12)
+
+	layout(1)
+	
+dev.off()
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+#                                EXTRAS
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 #-------------------------------------------------------------------------------
 #                 Fig_8yr_trend_by_stock
@@ -262,84 +388,6 @@ png(paste0(figpath, 'Fig_8yr_trend_by_stock.png'), width = 960, height = 1240)
 dev.off()
 
 
-#-------------------------------------------------------------------------------
-#                 Fig_8yr_precent_trend_by_stock
-#-------------------------------------------------------------------------------
-
-plot_trend_percent = function(stock_id){
-	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
-	for(i in 1:1000) pop[i,] = 
-		apply(akpv_datacube[[i]][
-			attr(akpv_datacube[[i]], 'stockid') == stock_id,], 2, sum)
-  maxi = ncol(akpv_datacube[[1]])
-  trendlen = 8
-  propTrendMat = NULL
-  for(i in 1:(maxi - trendlen + 1))
-    propTrendMat = cbind(propTrendMat,
-      100*(exp(apply(pop,1,function(v){coef(lm(I(log(y))~x, 
-        data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))-1))
-  bot = apply(propTrendMat,2,quantile, prob = .025)
-  top = apply(propTrendMat,2,quantile, prob = .975)
-  par(mar = c(5,5,5,1))
-    plot(c(1,length(top)), c(min(bot),max(top)), type = 'n',
-      xaxt = 'n', ylab = 'Trend (%/Year)', cex.main = 1.5,
-      xlab = 'Year', cex.lab = 2, cex.axis = 1.5,
-			main = paste0('Stock ', stock_id, ': ', 
-				stockid_names[stock_id,'stocknames']), 
-				ylim = c(-7,9))
-    axis(1, at = c(1,5,10,15,20), labels = c(2003, 2007, 2012, 2017, 2022),
-     cex.axis = 1.5)
-	grid(nx = NULL,
-     ny = NA,
-     lty = 2, col = "gray", lwd = 2)
-	polygon(x = c(1:21,21:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-  lines(c(1, 22), c(0,0), lty = 2, lwd = 3)
-  lines(apply(propTrendMat, 2, mean), pch = 19, lwd = 3)
-  points(apply(propTrendMat, 2, mean), pch = 19, cex = 2)
-}
-
-pdf(paste0(figpath, 'Fig_8yr_precent_trend_by_stock.pdf'), 
-	width = 13, height = 17)
-
-	layout(matrix(1:12, nrow = 4, ncol = 3, byrow = TRUE))
-
-	plot_trend_percent(stock_id = 1)
-	plot_trend_percent(stock_id = 2)
-	plot_trend_percent(stock_id = 3)
-	plot_trend_percent(stock_id = 4)
-	plot_trend_percent(stock_id = 5)
-	plot_trend_percent(stock_id = 6)
-	plot_trend_percent(stock_id = 7)
-	plot_trend_percent(stock_id = 8)
-	plot_trend_percent(stock_id = 9)
-	plot_trend_percent(stock_id = 10)
-	plot_trend_percent(stock_id = 11)
-	plot_trend_percent(stock_id = 12)
-
-	layout(1)
-	
-dev.off()
-
-png(paste0(figpath, 'Fig_8yr_precent_trend_by_stock.png'), width = 960, height = 1240)
-
-	layout(matrix(1:12, nrow = 4, ncol = 3, byrow = TRUE))
-
-	plot_trend_percent(stock_id = 1)
-	plot_trend_percent(stock_id = 2)
-	plot_trend_percent(stock_id = 3)
-	plot_trend_percent(stock_id = 4)
-	plot_trend_percent(stock_id = 5)
-	plot_trend_percent(stock_id = 6)
-	plot_trend_percent(stock_id = 7)
-	plot_trend_percent(stock_id = 8)
-	plot_trend_percent(stock_id = 9)
-	plot_trend_percent(stock_id = 10)
-	plot_trend_percent(stock_id = 11)
-	plot_trend_percent(stock_id = 12)
-
-	layout(1)
-	
-dev.off()
 
 #-------------------------------------------------------------------------------
 #                 Fig_CV_by_stock
@@ -549,97 +597,6 @@ png(paste0(figpath, 'Fig_statewide.png'), width = 620, height = 620)
 dev.off()
 
 
-#-------------------------------------------------------------------------------
-#                 Fig_statewide 3-panel
-#-------------------------------------------------------------------------------
-
-png(paste0(figpath, 'Fig_statewide_3panel.png'), width = 620, height = 720)
-
-	layout(matrix(1:2, nrow = 2, ncol = 1), heights = c(1.05, 1.2))
-
-# State-wide Abundance
-
-	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
-	for(i in 1:1000) pop[i,] = 
-		apply(akpv_datacube[[i]], 2, sum)
-	bot = apply(pop, 2, quantile, prob = .025)
-	top = apply(pop, 2, quantile, prob = .975)
-	par(mar = c(0,5,1,1))
-	plot(c(1.1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
-		xaxt = 'n', ylab = 'Estimated Abundance', cex.main = 1.5,
-		xlab = 'Year', cex.lab = 2.5, cex.axis = 1.5,
-#		main = 'State-wide Abundance'
-	)
-	grid(nx = NULL,
-     ny = NA,
-     lty = 2, col = "gray", lwd = 2)
-#	axis(1, at = c(5, 10, 15, 20, 25), labels = c(2000, 2005, 2010, 2015, 2020),
-#		cex.axis = 1.5)
-	polygon(x = c(1:28,28:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-	lines(1:28, apply(pop,2,mean), pch = 19, lwd = 2)
-	points(apply(pop,2,mean), pch = 19, cex = 2)
-#	for(i in 1:ncol(akpv_datacube[[1]]))
-#		lines(c(i,i),c(bot[i],top[i]), lty = 1, lwd = 2)
-
-
-# State-wide Trailing 8-year Trend
- 
-#  maxi = ncol(akpv_datacube[[1]])
-#  trendlen = 8
-#  linTrendMat = NULL
-#  for(i in 1:(maxi - trendlen + 1))
-#    linTrendMat = cbind(linTrendMat,
-#      apply(pop,1,function(v){coef(lm(y~x, 
-#        data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))
-#  bot = apply(linTrendMat,2,quantile, prob = .025)
-#  top = apply(linTrendMat,2,quantile, prob = .975)
-#  par(mar = c(0,5,0,1))
-#	plot(c(1.1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
-#      xaxt = 'n', yaxt = 'n', ylab = 'Trend (Seals/Year)', cex.main = 1.5,
-#      xlab = 'Year', cex.lab = 2.5, cex.axis = 1.5,
-#      main = paste0('Trailing ', trendlen, '-Year Trend by Year')
-#      )
-#    axis(2, at = c(-2000,0,2000,4000), labels = c(-2000, 0, 2000, 4000),
-#     cex.axis = 1.5)
-#	grid(nx = NULL,
-#     ny = NA,
-#     lty = 2, col = "gray", lwd = 2)
-#    lines(c(1,28),c(0,0), lty = 2, lwd = 3, col ='red')
-#    points(8:28, apply(linTrendMat,2,mean), pch = 19, cex = 2)
-#    for(i in 1:length(top))
-#      lines(c(i,i) + 7,c(bot[i],top[i]), lty = 1, lwd = 2)
-
-# moving trailing 8-yr trend estimates multiplicative        
-  maxi = ncol(akpv_datacube[[1]])
-  trendlen = 8
-  propTrendMat = NULL
-  for(i in 1:(maxi - trendlen + 1))
-    propTrendMat = cbind(propTrendMat,
-      100*(exp(apply(pop,1,function(v){coef(lm(I(log(y))~x, 
-        data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))-1))
-  bot = apply(propTrendMat,2,quantile, prob = .025)
-  top = apply(propTrendMat,2,quantile, prob = .975)
-  par(mar = c(5,5,0,1))
-	plot(c(1.1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
-      xaxt = 'n', ylab = 'Trend (%/Year)', cex.main = 1.5,
-      xlab = 'Year', cex.lab = 2.5, cex.axis = 1.5,
-#      main = paste0('Trailing ', trendlen, '-Year Trend by Year')
-      )
-		axis(1, at = c(5, 10, 15, 20, 25), labels = c(2000, 2005, 2010, 2015, 2020),
-			cex.axis = 1.5)
-	grid(nx = NULL,
-     ny = NA,
-     lty = 2, col = "gray", lwd = 2)
-  polygon(x = c(8:28,28:8),y = c(top,rev(bot)), col = 'grey', border = 'grey')
-	lines(8:28, apply(propTrendMat,2,mean), lwd = 2)
-	points(8:28, apply(propTrendMat,2,mean), pch = 19, cex = 2)
-#    for(i in 1:length(top))
-#      lines(c(i,i) + 7, c(bot[i],top[i]), lty = 1, lwd = 2)
-  lines(c(1,28),c(0,0), lty = 2, lwd = 3, col ='black')
-
-	layout(1)
-
-dev.off()
 
 #-------------------------------------------------------------------------------
 #                 Tab_sample_sizes
