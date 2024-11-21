@@ -6,6 +6,8 @@ setwd(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
 load('dTerr.rda')
 load('dGlac.rda')
 load('akpvpolys_sf.rda')
+load('dHOterr.rda')
+load('dHOglac.rda')
 
 dstk = rbind(dTerr[,c('polyid', 'stockid', 'yr')],
 	dGlac[,c('polyid', 'stockid', 'yr')])
@@ -129,4 +131,11 @@ write.csv(current_est_table, file = paste0(tabpath,'current_est_table.csv'),
 
 
 
+#-------------------------------------------------------------------------------
+#                 Which stocks had haulout records?
+#-------------------------------------------------------------------------------
 
+str(dHOterr)
+sort(unique(as.character(dHOterr$stockid)))
+sort(unique(as.character(dHOglac$stockid)))
+sort(unique(as.character(dGlac$stockid)))
