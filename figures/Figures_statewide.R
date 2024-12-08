@@ -313,38 +313,22 @@ setwd(paste0('/mnt/ExtraDrive1/Work/desktop_data/2024_papers/',
 	'akhs-abundance-trends/akhs-abundance-trends/data/'))
 
 # get the aerial survey data for only stocks 3 through 7
-dstk = dTerr[dTerr$stockid == 3 | dTerr$stockid == 4 | dTerr$stockid == 5 | 
+dstk_1to2 = dTerr[dTerr$stockid == 1 | dTerr$stockid == 2,]
+dstk_3to7 = dTerr[dTerr$stockid == 3 | dTerr$stockid == 4 | dTerr$stockid == 5 | 
 	dTerr$stockid == 6 | dTerr$stockid == 7,]
+dstk_8to12 = dTerr[dTerr$stockid == 8 | dTerr$stockid == 8 | dTerr$stockid == 10 | 
+	dTerr$stockid == 11 | dTerr$stockid == 12,]
 # get the haul-out data for only stocks 3 through 7
-dHO = dHOterr[dHOterr$stockid == 3 | dHOterr$stockid == 4 | 
+dHO_1to2 = dHOterr[dHOterr$stockid == 1 | dHOterr$stockid == 2,]
+dHO_3to7 = dHOterr[dHOterr$stockid == 3 | dHOterr$stockid == 4 | 
 	dHOterr$stockid == 5 | dHOterr$stockid == 6 | dHOterr$stockid == 7,]
+dHO_8to12 = dHOterr[dHOterr$stockid == 8 | dHOterr$stockid == 9 | 
+	dHOterr$stockid == 10 | dHOterr$stockid == 11 | dHOterr$stockid == 12,]
 
-# only use data after 1995
-dstk = dstk[dstk$yr > 1995,]
-# make sure polyid and stockid are factors in count data
-dstk$polyid = as.factor(as.character(dstk$polyid))
-dstk$stockid = as.factor(as.character(dstk$stockid))
-IDs = levels(dstk$polyid)
-#order by datadatetime within speno, and remove duplicate times
-dstk = dstk[order(dstk$polyid, dstk$survey_dt),]
-
-# make sure speno is factor in haulout data
-dHO$speno = as.factor(as.character(dHO$speno))
-HOIDs = levels(dHO$speno)
-#order by datadatetime within speno
-dHO = dHO[order(dHO$speno, dHO$date_time),]
-# check for any duplicated times (must be increasing within animal)
-any(dHO$yrhr0[2:dim(dHO)[1]] - dHO$yrhr0[1:(dim(dHO)[1] - 1)] == 0)
-
-# inspect average haulout proportions by seal ID
-y = dHO$y
-# create binary data from binned data
-y[dHO$y < 0.5] = 0
-y[y != 0] = 1
-# create design matrix
-X <- model.matrix(y ~ dystd + I(dystd^2) + tdstd + I(tdstd^2)
-  + hrstd + I(hrstd^2), data = dHO)
-# load the MCMC results from fitting haul-out model
+load('MHO_1to2.rda')
+load('MHO_3to7.rda')
+load('MHO_8to12.rda')
+load('MHO_glac.rda')
 
 
 #pdf(file = paste0(out_path,'HO_betas.pdf'), width = 15, height = 6)
@@ -376,9 +360,25 @@ beta5 = unlist(lapply(MHO[['beta']], function(x){x[[6]]}))
 beta6 = unlist(lapply(MHO[['beta']], function(x){x[[7]]}))
 }
 gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
-	
-  par(mar = c(6,7,8,3))
-  plot(c(1,80),c(0,1), type = 'n',
+
+
+plot_timeyear = function(MHO, dstk)
+{
+	# only use data after 1995
+	dstk = dstk[dstk$yr > 1995,]
+	# make sure polyid and stockid are factors in count data
+	dstk$polyid = as.factor(as.character(dstk$polyid))
+	dstk$stockid = as.factor(as.character(dstk$stockid))
+	IDs = levels(dstk$polyid)
+	#order by datadatetime within speno, and remove duplicate times
+	dstk = dstk[order(dstk$polyid, dstk$survey_dt),]
+
+	beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
+	beta1 = unlist(lapply(MHO[['beta']], function(x){x[[2]]}))
+	beta2 = unlist(lapply(MHO[['beta']], function(x){x[[3]]}))
+#  par(mar = c(6,7,8,3))
+	par(mar = c(0,7,8,3))
+  plot(c(1,75),c(0,1), type = 'n',
     ylab = '', xlab = '', xaxt = 'n',
     cex.lab = cex_lab, cex.axis = cex_axis)
   x = ((1:75) - 30)/30
@@ -391,13 +391,115 @@ gam = unlist(lapply(MHO[['gam']], function(x){x[[1]]}))
   top = apply(HOvec,2,quantile, probs = .95)
 	polygon(x = c(1:75,75:1),y = c(top,rev(bot)), col = 'grey', border = 'grey')
   lines(1:75, apply(HOvec,2,mean), lwd = 4)
-	axis(1, at = (0:4)*20, labels = (0:4)*20, cex.axis = 2.5, padj = 0.4)
-	mtext('Days since 15 July', side = 1, cex = cex_lab, 
-		adj = adj_1, padj = padj_1)
 	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
 		adj = adj_2, padj = padj_2)
+	par(mar = c(6,7,0,3))
+	hist(dstk$yday-as.POSIXlt(as.POSIXct("2005-07-15"))$yday, main = '',
+		xaxt = 'n', cex.lab = cex_lab, cex.axis = cex_axis, xlab = '',
+		ylab = '', yaxt = 'n', xlim = c(0,75)) 
+	box()
+  
+	axis(1, at = c(0, 15, 45, 75), labels = c('', '', '', ''), 
+		cex.axis = 2.5, padj = 0.4, lwd.ticks = 3, tck = -0.2)
+	axis(1, at = c(7, 30, 60), labels = c('Jul', 'Aug', 'Sep'), 
+		cex.axis = 3.0, padj = 0.6, lwd.ticks = 0)
+}
 
-	
+dstk = dstk_1to2
+MHO = MHO_1to2
+plot_timeday = function(MHO, dstk)
+{
+	# only use data after 1995
+	dstk = dstk[dstk$yr > 1995,]
+	# make sure polyid and stockid are factors in count data
+	dstk$polyid = as.factor(as.character(dstk$polyid))
+	dstk$stockid = as.factor(as.character(dstk$stockid))
+	IDs = levels(dstk$polyid)
+	#order by datadatetime within speno, and remove duplicate times
+	dstk = dstk[order(dstk$polyid, dstk$survey_dt),]
+
+	beta0 = unlist(lapply(MHO[['beta']], function(x){x[[1]]}))
+	beta1 = unlist(lapply(MHO[['beta']], function(x){x[[4]]}))
+	beta2 = unlist(lapply(MHO[['beta']], function(x){x[[5]]}))
+#  par(mar = c(6,7,8,3))
+	par(mar = c(0,7,8,3))
+  plot(c(-12,12),c(0,1), type = 'n',
+    ylab = '', xlab = '', xaxt = 'n',
+    cex.lab = cex_lab, cex.axis = cex_axis)
+	x = (-60:60)/30
+	HOvec = matrix(0, nrow = length(beta1), ncol = length(x))
+	for(k in 1:length(beta1)) {
+		Xb = beta0[k] + mean(unlist(MHO[['gam']][k])) + 
+			beta1[k]*x + beta2[k]*x^2
+		HOvec[k,] = exp(Xb)/(1+exp(Xb))
+		}
+  bot = apply(HOvec,2,quantile, probs = .05)
+  top = apply(HOvec,2,quantile, probs = .95)
+	polygon(x = c((-60:60)/5,rev((-60:60)/5)),
+		y = c(top,rev(bot)), col = 'grey', border = 'grey')
+	lines((-60:60)/5, apply(HOvec,2,mean), lwd = 4)
+	mtext('Haul-out Probability', side = 2, cex = cex_lab, 
+		adj = adj_2, padj = padj_2)
+	par(mar = c(6,7,0,3))
+	hist(dstk$hr - 12, main = '',
+		xaxt = 'n', cex.lab = cex_lab, cex.axis = cex_axis, xlab = '',
+		ylab = '', yaxt = 'n', xlim = c(0,75)) 
+	box()
+#	mtext('Freq', side = 2, cex = cex_lab, 
+#		adj = adj_2, padj = padj_2)
+  
+	axis(1, at = c(0, 15, 45, 75), labels = c('', '', '', ''), 
+		cex.axis = 2.5, padj = 0.4, lwd.ticks = 3, tck = -0.2)
+	axis(1, at = c(7, 30, 60), labels = c('Jul', 'Aug', 'Sep'), 
+		cex.axis = 3.0, padj = 0.6, lwd.ticks = 0)
+#	mtext('Days since 15 July', side = 1, cex = cex_lab, 
+#		adj = adj_1, padj = padj_1)
+}
+
+png(paste0(figpath, 'Fig_HO_expl_var_test.png'), width = 1000, height = 1300)
+
+layout(matrix(1:8, ncol = 1), heights = c(2,1,2,1,2,1,2,1))
+
+plot_timeyear(MHO_1to2, dstk_1to2)
+plot_timeyear(MHO_3to7, dstk_3to7)
+plot_timeyear(MHO_8to12, dstk_8to12)
+plot_timeyear(MHO_glac, dGlac)
+
+dev.off()
+
+dstk = dstk_3to7
+dHO = dHO_3to7
+load('MHO_3to7.rda')
+MHO = MHO_3to7
+# only use data after 1995
+dstk = dstk[dstk$yr > 1995,]
+# make sure polyid and stockid are factors in count data
+dstk$polyid = as.factor(as.character(dstk$polyid))
+dstk$stockid = as.factor(as.character(dstk$stockid))
+IDs = levels(dstk$polyid)
+#order by datadatetime within speno, and remove duplicate times
+dstk = dstk[order(dstk$polyid, dstk$survey_dt),]
+
+# make sure speno is factor in haulout data
+dHO$speno = as.factor(as.character(dHO$speno))
+HOIDs = levels(dHO$speno)
+#order by datadatetime within speno
+dHO = dHO[order(dHO$speno, dHO$date_time),]
+# check for any duplicated times (must be increasing within animal)
+any(dHO$yrhr0[2:dim(dHO)[1]] - dHO$yrhr0[1:(dim(dHO)[1] - 1)] == 0)
+
+# inspect average haulout proportions by seal ID
+y = dHO$y
+# create binary data from binned data
+y[dHO$y < 0.5] = 0
+y[y != 0] = 1
+# create design matrix
+X <- model.matrix(y ~ dystd + I(dystd^2) + tdstd + I(tdstd^2)
+  + hrstd + I(hrstd^2), data = dHO)
+# load the MCMC results from fitting haul-out model
+
+plot_timeyear(MHO, dstk)
+
 # beta - hour-of-day effect
 
 	plot(c(-12,12),c(0,1), type = 'n',

@@ -105,6 +105,7 @@ write.table(num_sampled, file = paste0(tabpath, 'Survey_Effort_Summary.csv'), qu
 #-------------------------------------------------------------------------------
 
 	pDecrease = rep(NA, times = 12)
+	recentTrend = rep(NA, times = 12)
 	for(j in 1:12) {
 		stock_id = j
 		pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
@@ -119,10 +120,13 @@ write.table(num_sampled, file = paste0(tabpath, 'Survey_Effort_Summary.csv'), qu
 				100*(exp(apply(pop,1,function(v){coef(lm(I(log(y))~x, 
 					data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))-1))
 		pDecrease[j] = sum(propTrendMat[,21] < 0)/1000
+		recentTrend[j] = mean(propTrendMat[,21])
 	}
 
+current_est_table = cbind(current_est_table, c(NA, recentTrend))
 current_est_table = cbind(current_est_table, c(NA, pDecrease))
-colnames(current_est_table)[7] = 'pDecrease'
+colnames(current_est_table)[7] = 'Trend2023'
+colnames(current_est_table)[8] = 'pDecrease'
 
 # ----------- Table of Results
 
