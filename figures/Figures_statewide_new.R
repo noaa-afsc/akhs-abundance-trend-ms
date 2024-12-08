@@ -1334,17 +1334,17 @@ plot_simple_abundance = function(stock_id){
 	rownames(abu_poly_by_year)
 	par(mar = marTop)
 	plot(c(1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
-		xaxt = 'n', ylab = 'Abundance', cex.main = cex_main,
+		xaxt = 'n', ylab = '', cex.main = cex_main, yaxt = 'n', bty = 'n',
 		xlab = '', cex.lab = cexLab, cex.axis = cexAxis)
-	grid(nx = NULL,
-     ny = NA,
-     lty = 2, col = "gray", lwd = 3)
+#	grid(nx = NULL,
+#     ny = NA,
+#     lty = 2, col = "gray", lwd = 3)
 	vals = 	apply(pop, 2, mean)
-	lines(vals, lwd = 3.5)
-	points(vals, pch = 19, cex = 3.0)
-	axis(1, at = c(5,10,15,20,25), labels = c(2000, 2005, 2010, 2015, 2020),
-		cex.axis = cexAxis)
-	mtext('Year', side = 1, padj = 2.2, cex = cexLab)
+	lines(vals, lwd = 8)
+#	points(vals, pch = 19, cex = 3.0)
+#	axis(1, at = c(5,10,15,20,25), labels = c(2000, 2005, 2010, 2015, 2020),
+#		cex.axis = cexAxis)
+#	mtext('Year', side = 1, padj = 2.2, cex = cexLab)
 }
 
 for(i in 1:12) {
