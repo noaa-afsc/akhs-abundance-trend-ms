@@ -1315,7 +1315,7 @@ plot_simple_abundance = function(stock_id){
 	cexLab =  3.0
 	cexAxis = 2.5
 	abu_pts_cex = 1.7
-	marTop = c(6,6,0,0)
+	marTop = c(0,0,0,0)
 	cex_main = 1.7
 	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
 	for(i in 1:1000) pop[i,] = 
@@ -1340,7 +1340,7 @@ plot_simple_abundance = function(stock_id){
 #     ny = NA,
 #     lty = 2, col = "gray", lwd = 3)
 	vals = 	apply(pop, 2, mean)
-	lines(vals, lwd = 8)
+	lines(vals, lwd = 15)
 #	points(vals, pch = 19, cex = 3.0)
 #	axis(1, at = c(5,10,15,20,25), labels = c(2000, 2005, 2010, 2015, 2020),
 #		cex.axis = cexAxis)
