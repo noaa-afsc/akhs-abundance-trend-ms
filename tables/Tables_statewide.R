@@ -143,3 +143,37 @@ str(dHOterr)
 sort(unique(as.character(dHOterr$stockid)))
 sort(unique(as.character(dHOglac$stockid)))
 sort(unique(as.character(dGlac$stockid)))
+
+#-------------------------------------------------------------------------------
+#                 Max Min of Trends
+#-------------------------------------------------------------------------------
+
+stock_id = 1
+minmaxtrends = NULL
+for(stock_id in 1:12) {
+	pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
+	for(i in 1:1000) pop[i,] = 
+		apply(akpv_datacube[[i]][
+			attr(akpv_datacube[[i]], 'stockid') == stock_id,], 2, sum)
+  maxi = ncol(akpv_datacube[[1]])
+  trendlen = 8
+  propTrendMat = NULL
+  for(i in 1:(maxi - trendlen + 1))
+    propTrendMat = cbind(propTrendMat,
+      100*(exp(apply(pop,1,function(v){coef(lm(I(log(y))~x, 
+        data.frame(x=1:8,y = v[i:(i + trendlen - 1)])))[2]}))-1))
+	yrly8trend = data.frame(year = 2003:2023, 
+		trend = apply(propTrendMat, 2, mean), 
+		bot = apply(propTrendMat,2,quantile, prob = .025),
+		top = apply(propTrendMat,2,quantile, prob = .975))
+	DFmin = yrly8trend[yrly8trend$trend == min(yrly8trend$trend),]
+	names(DFmin) = c('minyear','min', 'minLower95', 'minUpper95')
+	DFmax = yrly8trend[yrly8trend$trend == max(yrly8trend$trend),]
+	names(DFmax) = c('maxyear','max', 'maxLower95', 'maxUpper95')
+	DFtemp = cbind(stock_id, DFmin, DFmax)
+	minmaxtrends = rbind(minmaxtrends, DFtemp)
+}
+
+write.csv(minmaxtrends, file = paste0(tabpath,'minmaxtrends.csv'),
+	quote = FALSE, row.names = FALSE)
+

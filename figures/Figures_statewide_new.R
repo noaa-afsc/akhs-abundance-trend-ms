@@ -1332,7 +1332,7 @@ plot_simple_abundance = function(stock_id){
 					stock_id,]
 	abu_poly_by_year = abu_poly_by_year/length(akpv_datacube)
 	rownames(abu_poly_by_year)
-	par(mar = marTop)
+	par(mar = marTop, bg = NA)
 	plot(c(1,ncol(akpv_datacube[[1]])), c(min(bot),max(top)), type = 'n',
 		xaxt = 'n', ylab = '', cex.main = cex_main, yaxt = 'n', bty = 'n',
 		xlab = '', cex.lab = cexLab, cex.axis = cexAxis)
@@ -1340,7 +1340,7 @@ plot_simple_abundance = function(stock_id){
 #     ny = NA,
 #     lty = 2, col = "gray", lwd = 3)
 	vals = 	apply(pop, 2, mean)
-	lines(vals, lwd = 15)
+	lines(vals, lwd = 25)
 #	points(vals, pch = 19, cex = 3.0)
 #	axis(1, at = c(5,10,15,20,25), labels = c(2000, 2005, 2010, 2015, 2020),
 #		cex.axis = cexAxis)
@@ -1354,3 +1354,5 @@ for(i in 1:12) {
 		plot_simple_abundance(i)
 	dev.off()
 }
+
+
