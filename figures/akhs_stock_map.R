@@ -61,6 +61,36 @@ map_labels <- tibble(
            crs = 4326) |> 
   st_transform(3338)
 
+nudge_label_y <- c(
+  0,       #Aleutians
+  -150,    #Pribs
+  -175,    #Bristol Bay
+  0,       #N Kodiak
+  -130,    #S Kodiak
+  220,     #Prince William Sound
+  400,     #Cook Inlet
+  -80,    #Galcier Bay
+  225,     #Lynn Canal/Stephens
+  -175,    #Sitka
+  -150,    #Dixon/Cape Decision
+  75      #Clarence Strait
+) *1000
+
+nudge_label_x <- c(
+  0,            #Aleutians
+  0,    #Pribs
+  0,    #Bristol Bay
+  100,            #N Kodiak
+  110,    #S Kodiak
+  0,     #Prince William Sound
+  -100,     #Cook Inlet
+  -250,    #Galcier Bay
+  100,     #Lynn Canal/Stephens
+  0,    #Sitka
+  0,    #Dixon/Cape Decision
+  0      #Clarence Strait
+) *1000
+
 ggplot() +
   geom_sf(
     data = akhs_stocks,
@@ -124,36 +154,6 @@ ggplot() +
     legend.title = element_blank(),
     axis.title = element_blank()
   )
-
-nudge_label_y <- c(
-  0,       #Aleutians
-  -150,    #Pribs
-  -175,    #Bristol Bay
-  0,       #N Kodiak
-  -130,    #S Kodiak
-  220,     #Prince William Sound
-  400,     #Cook Inlet
-  -80,    #Galcier Bay
-  225,     #Lynn Canal/Stephens
-  -175,    #Sitka
-  -150,    #Dixon/Cape Decision
-  75      #Clarence Strait
-) *1000
-
-nudge_label_x <- c(
-  0,            #Aleutians
-  0,    #Pribs
-  0,    #Bristol Bay
-  100,            #N Kodiak
-  110,    #S Kodiak
-  0,     #Prince William Sound
-  -100,     #Cook Inlet
-  -250,    #Galcier Bay
-  100,     #Lynn Canal/Stephens
-  0,    #Sitka
-  0,    #Dixon/Cape Decision
-  0      #Clarence Strait
-) *1000
 
 ggsave(here::here("figures/png/akhs_stock_map.png"),
   device = agg_png,
