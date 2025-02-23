@@ -1,8 +1,6 @@
-# set a path to the datacube
-mypath = paste0('/mnt/ExtraDrive1/Work/desktop_data/2022_papers/',
-	'HSsurv/data/')
-# load the datacube
-load(paste0(mypath, 'akpv_datacube.rda'))
+# note the path to the datacube
+library(here)
+load(here::here('data/akpv_datacube.rda'))
 
 # check out the structure of the datacube
 class(akpv_datacube) # it is a list
@@ -56,3 +54,21 @@ for(i in 1:28)
 	summedians[i] = sum(sitebyyearmedians[attr(sitebyyearmedians, 
 		'stockid') == stock_id, years[i]])
 plot(years, summedians)
+
+#Nmin
+
+nmin_list <- vector("list", length=12L)
+
+for (stock_id in 1:12) {
+pop = matrix(NA, nrow = 1000, ncol = ncol(akpv_datacube[[1]]))
+for(i in 1:1000) pop[i,] =
+apply(akpv_datacube[[i]][attr(akpv_datacube[[i]], 'stockid') ==
+stock_id,], 2, sum)
+Nmin_allyears = apply(pop,2,quantile, prob = .2)
+Nmin_2023 = Nmin_allyears[28]
+nmin_list[[stock_id]] <- Nmin_2023
+}
+
+library(datapasta)
+tibble(Nmin = unlist(nmin_list), stock_id = 1:12) |> 
+	datapasta::tribble_format()
