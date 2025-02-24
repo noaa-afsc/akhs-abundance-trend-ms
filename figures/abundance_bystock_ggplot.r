@@ -89,6 +89,7 @@ fraction_sampled_df <- calculate_fraction_sampled(akpv_datacube, dstk)
 
 # Create the bar plot
 library(patchwork)
+library(scales)
 
 # Define a mapping of stock IDs to stock names
 stock_names <- c(
@@ -97,8 +98,8 @@ stock_names <- c(
   "3" = "Bristol Bay",
   "4" = "North Kodiak",
   "5" = "South Kodiak",
-  "6" = "Prince William Sound",
-  "7" = "Cook Inlet/Shelikof Strait",
+  "7" = "Cook Inlet/Shelikof Strait", # Changed order
+  "6" = "Prince William Sound",       # Changed order
   "8" = "Glacier Bay/Icy Strait",
   "9" = "Lynn Canal/Stephens Passage",
   "10" = "Sitka/Chatham Strait",
@@ -107,47 +108,60 @@ stock_names <- c(
   # Add more mappings as needed
 )
 
-plots <- lapply(unique(summary_df$stock), function(stock_id) {
-  stock_name <- stock_names[as.character(stock_id)]
+# Ensure the order of the stock IDs
+ordered_stock_ids <- c("1", "2", "3", "4", "5", "7", "6", "8", "9", "10", "11", "12")
+
+# Create individual plots for each stock
+plots <- lapply(ordered_stock_ids, function(stock_id) {
+  stock_name <- stock_names[stock_id]
   
+  # Create the abundance plot for the current stock
   abundance_plot <- ggplot(subset(summary_df, stock == stock_id), aes(x = as.numeric(year), y = mean_abundance)) +
-    geom_line() +
-    geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci), alpha = 0.2) +
-    geom_vline(xintercept = c(2000, 2005, 2010, 2015, 2020), linetype = "dashed", color = "grey") +
+    geom_line() + # Add a line for mean abundance
+    geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci), alpha = 0.2) + # Add a ribbon for confidence intervals
+    geom_vline(xintercept = c(2000, 2005, 2010, 2015, 2020), linetype = "dashed", color = "grey") + # Add vertical dashed lines
     labs(
-      title = stock_name,
-      y = "Abundance"
+      title = stock_name, # Set the plot title to the stock name
+      y = "Abundance" # Set the y-axis label
     ) +
-    geom_point(color = "black") +
-    scale_x_continuous(limits = c(1996, NA), breaks = c(2000, 2005, 2010, 2015, 2020)) +
-    theme_minimal() +
+    geom_point(color = "black") + # Add points for mean abundance
+    scale_x_continuous(limits = c(1996, NA), breaks = c(2000, 2005, 2010, 2015, 2020)) + # Set x-axis limits and breaks
+    scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix = "k")) + # Format y-axis labels with 'k' notation
+    theme_minimal() + # Use a minimal theme
     theme(
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      axis.line = element_line(color = "black"),
-      axis.ticks = element_line(color = "black"),
-      axis.title.x = element_blank()
+      panel.grid.major = element_blank(), # Remove major grid lines
+      panel.grid.minor = element_blank(), # Remove minor grid lines
+      axis.line = element_line(color = "black"), # Add axis lines
+      axis.ticks = element_line(color = "black"), # Add axis ticks
+      axis.title.x = element_blank(), # Remove x-axis title
+      axis.text.x = element_blank(), # Remove x-axis text
+      axis.title = element_text(size = 12), # Increase axis title font size
+      axis.text = element_text(size = 10)   # Increase axis text font size
     )
   
+  # Create the fraction sampled plot for the current stock
   fraction_sampled_plot <- ggplot(subset(fraction_sampled_df, stock == stock_id), aes(x = as.numeric(year), y = fraction_sampled)) +
-    geom_bar(stat = "identity", fill = "grey", color = "black", linewidth = 0.2) +
-    geom_vline(xintercept = c(2000, 2005, 2010, 2015, 2020), linetype = "dashed", color = "grey") +
+    geom_bar(stat = "identity", fill = "grey", color = "black", linewidth = 0.2) + # Add bars for fraction sampled
+    geom_vline(xintercept = c(2000, 2005, 2010, 2015, 2020), linetype = "dashed", color = "grey") + # Add vertical dashed lines
     labs(
-      x = "Year",
-      y = "Effort"
+      x = "Year", # Set the x-axis label
+      y = "Effort" # Set the y-axis label
     ) +
-    coord_cartesian(ylim = c(0, 1)) +
-    scale_x_continuous(limits = c(1996, NA), breaks = c(2000, 2005, 2010, 2015, 2020)) +
-    scale_y_continuous(breaks = c(0, 0.5, 1.0)) +
-    theme_minimal() +
+    coord_cartesian(ylim = c(0, 1)) + # Set y-axis limits
+    scale_x_continuous(breaks = c(2000, 2005, 2010, 2015, 2020)) + # Set x-axis breaks
+    scale_y_continuous(breaks = c(0, 0.5, 1.0)) + # Set y-axis breaks
+    theme_minimal() + # Use a minimal theme
     theme(
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      axis.line = element_line(color = "black"),
-      axis.ticks = element_line(color = "black"),
-      legend.position = "none"
+      panel.grid.major = element_blank(), # Remove major grid lines
+      panel.grid.minor = element_blank(), # Remove minor grid lines
+      axis.line = element_line(color = "black"), # Add axis lines
+      axis.ticks = element_line(color = "black"), # Add axis ticks
+      legend.position = "none", # Remove legend
+      axis.title = element_text(size = 13), # Increase axis title font size
+      axis.text = element_text(size = 11)   # Increase axis text font size
     )
   
+  # Combine the abundance and fraction sampled plots
   combined_plot <- abundance_plot / fraction_sampled_plot + plot_layout(heights = c(2, 1))
   return(combined_plot)
 })
