@@ -16,7 +16,8 @@ dGlac = dGlac[!is.na(dGlac$count),]
 dstk = rbind(dTerr[,c('polyid', 'stockid', 'yr')],
 	dGlac[,c('polyid', 'stockid', 'yr')])
 
-library(tidyverse)
+library(purrr)
+library(tibble)
 
 get_total_abundance_tidy <- function(datacube) {
     years <- colnames(datacube[[1]])
