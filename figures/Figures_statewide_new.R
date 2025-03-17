@@ -339,7 +339,7 @@ layout(matrix(1:12, nrow = 4, byrow = TRUE))
 cex_lab = 1.7
 cex_axis = 2.2
 adj_1 = 0.5
-padj_1 = 2.3
+padj_1 = 2.7
 adj_2 = 0.5
 padj_2 = -2.1
 cex_main = 5
@@ -400,9 +400,11 @@ plot_timeyear = function(MHO, dstk)
 	box()
   
 	axis(1, at = c(0, 15, 45, 75), labels = c('', '', '', ''), 
-		cex.axis = 2.5, padj = 0.4, lwd.ticks = 3, tck = -0.2)
+		cex.axis = 2.5, padj = 0.4)
 	axis(1, at = c(7, 30, 60), labels = c('Jul', 'Aug', 'Sep'), 
-		cex.axis = 2.5, padj = 0.6, lwd.ticks = 0)
+		cex.axis = 2.5, padj = 0.4, lwd.ticks = 0)
+	mtext('Date', side = 1, cex = cex_lab, 
+	      adj = adj_1, padj = padj_1)
 }
 
 plot_timeday = function(MHO, dstk)
